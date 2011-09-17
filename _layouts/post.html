@@ -1,0 +1,22 @@
+<html>
+<head>
+  <link rel="stylesheet" type="text/css" href="style.css" />
+  <title>{{ page.title }}</title>
+</head>
+<body>
+<center>
+  <br/>
+  <div id="container">
+    <h1>{{ page.title }}</h1>
+
+    <div id="button" style="float:left">
+      <a href="archive">archive</a>
+      <a href="home">home</a>
+    </div>
+    <div style="float:right"><small>{{ page.date }}</small></div>
+    <br />
+    {{ content }}
+  </div>
+</center>
+</body>
+</html>

@@ -1,0 +1,33 @@
+--
+layout: post
+title: haskell fun
+--
+
+<p>So, just as a disclaimer, I am not a haskeller.</p>
+<p>Yesterday, I picked up a copy of <a href="http://book.realworldhaskell.org">Real World Haskell</p> for the third time. It's a great book, from what I've read so far - the full text is actually available for free online. I get distracted when looking at one webpage for too long (with the whole internet sitting out there), so I've found that reading books helps me to concentrate and focus on the task at hand. There's not (usually) a new tab button in printed text.</p>
+<p>So, I should tell you, Haskell is hard. Haskell can sometimes be  <b>really</b> hard. Harder than anything else I've tried, for certain. But, not for the same reason you would think. It doesn't have a weird obfuscated syntax like APL, it doesn't have problems with documentation or tutorials, and it has a great, very alive community. The reason why Haskell is hard is because it's so different and foreign. That's also one of the major contributing factors to it's awesomeness.</p>
+<p>Haskell is a functional programming language, but unlike some languages that support the functional programming paradigm, it takes purity to the extreme. In Haskell, for example, variables are not allowed to change state. If you say that the variable foo is 5, and then you set foo to be 10, your code will not compile.</p>
+<p>Yeah, it's really different.</p>
+<p>Haskell takes an entirely different approach to programming from what I'm used to, and it definitely has a lot of benefits. Haskell is strongly typed, meaning that while types can often be inferred by context, you can't let different types play with each other without supervision. You can't coerce an integer into a floating point number. You can't add a string containing numbers and another number together. But, it turns out, types are one of haskell's biggest strengths.</p>
+<p>Haskell is statically and strongly typed. The compiler knows the type of every value and every expression at compile time. This eliminates a lot of errors, which can lead to faster development times and less time debugging. While there is more time spent fixing type errors, this is the main bulk of it. There are absolutely no type errors at runtime.</p>
+<p>Haskell takes some pretty strong stands on purity. Functions, by default, are not allowed to modify state. This means that you can't have a function that creates new variables or modifies existing variables. Functions are first-class-citizens. It took me quite a while to understand what that meant, largely due to laziness (which is another great aspect of haskell), but it basically means that functions can be placed anywhere a normal expression can. You can pass functions as arguments to other functions, return functions as values for functions, and use functions as building blocks for big applications. You can even assign a variable as a function. In fact, haskell doesn't even really make a difference between functions and variables - they're both symbols, and can be used almost interchangably.</p>
+<p>Another cool aspect of haskell that takes a little bit of thought to appreciate is it's laziness. This isn't usually considered a positive quality, but in haskell it simply means that expressions aren't evaluated unless they need to be. I think the easiest example to understand is infinite lists. In haskell, you can use enumeration to create a list that goes from 1 to 100 pretty easily.</p>
+{% highlight haskell %}
+infiniteList = [1..] -- an infinite list of values from one to infinity
+{% endhighlight %}
+<p>Pretty easy, right? infiniteList is now a list of numbers from one to infinity. But what if we wanted to get the first 100 numbers in this infinite list without crashing the program?</p>
+{% highlight haskell %}
+take 100 infiniteList
+{% endhighlight %}
+<p>The reason that this works is because haskell doesn't evaluate an infinite amount of numbers. In fact, that assignment was really just what Real World Haskell calls a "promise": whenever we want some of infiniteList, it only gives us what we ask for, and nothing more. You might be familiar with short-circuiting, which is another example of laziness:</p>
+{% highlight haskell %}
+import SuperComplexStuff
+
+foo = if True || someReallyBigCalculation then "foo" else "bar"
+{% endhighlight %}
+<p>Because haskell is lazy, and because of how haskell handles || (or), it evaluates the left side first, and never even evaluates the right side at all. If the left hand operand had evaluated to false, it would then evaluate the right side to see what it returns. The cool thing is, || isn't special at all - it's a regular function! We could even write our own version of or, which is exactly what Real World Haskell does:</p>
+{% highlight haskell %}
+newOr a b = if a then a else b
+newOr True (3 + 3) == (4 + 4)
+ {% endhighlight %}
+<p>In this example, the expression (3 + 3) == (4 + 4) isn't even evaluted at all, due to haskell's laziness. And for once, laziness is a good thing.</p>

@@ -1,0 +1,84 @@
+---
+layout: post
+title: parsing facebook birthdays with perl6
+---
+
+<p>Did this a little while ago, but I haven't been posting anything to this blog, so I thought I might demonstrate how I used perl6 to solve a fun problem a little while ago.</p>
+<p>Perl6 is the next version of the perl programming language, and it's gotten a lot of slack for not being very fast and not being fully implemented. However, even though it's not very fast and people are still working on a complete implementation, there are some great implementations available that are quite usable, and you can start writing perl6 code right now! (I use <a href="http://rakudo.org">rakudo</a>).</p>
+<p>Anyway, I logged on to my facebook page and started looking through the notifications I had, and I noticed that there were 7 birthdays today. I thought that was really curious, and I thought it was cool that I had all this information about the birthdates of my friends accessible. I searched a little more, and I found a page that not only contained all the birthdate information that was accessible to me (347 entries for me).</p>
+<p>The interesting part was, there was a button at the bottom that said "Export Birthdays". I clicked on it, and it turned out to be a webcal:// url. A bit of googling told me that by getting rid of the webcall protocol part, I could download the ICS file that it linked to. Upon downloading that, to my pleasant surprise, I discovered that the ICS file was really just a plaintext file!</p>
+<p>I'm a real big fan of plaintext, as anything can read it and it's easy to write scripts to run through the information. Immediately, my mind went straight to perl. I'm probably more comfortable using perl than any other language, and I love the simplicity and ease with which perl can run through text. I wouldn't call myself a perl hacker, but I've used perl with favorable results before.</p>
+<p>The ICS file that I downloaded was 2558 lines, and was structured the same way throughout the entire document. Each line began with a keyword in capital letters, followed by a colon, and some more text associated with that keyword. Here's the header of the document:</p>
+<code>BEGIN:VCALENDAR
+PRODID:-//Facebook//NONSGML Facebook Events V1.0//EN
+X-WR-CALNAME:Friends' Birthdays
+X-PUBLISHED-TTL:PT12H
+X-ORIGINAL-URL:http://www.facebook.com/events/birthdays/
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:PUBLISH</code>
+<p>Following this, there were individual entries that followed this pattern:</p>
+<code>BEGIN:VEVENT
+DTSTART:20120101
+SUMMARY:John Doe's Birthday
+RRULE:FREQ=YEARLY
+DURATION:P1D
+UID:foo@facebook.com
+END:VEVENT</code>
+<p>As you can see, it's pretty self-explanatory. The BEGIN and END keywords are similar to tags you would see in HTML, and the entire file is one big VCALENDAR file. For what I'm doing, I can disregard the RRULE, DURATION, and UID tags. I'm really only interested in the birthdate (DTSTART), and whose birthdate it is (SUMMARY). The DTSTART tag already has the date in YYYY-MM-DD format, which lists all dates in sequential order, so I don't have to do anything weird with that. It's really all quite convenient.</p>
+<p>So, the first thing I did was open up the file, and go through each line. I created an @index array to hold all the information, and an $items scalar to keep track of where I was, and how many items there were. If the line began with DTSTART, I initialized an anonymous array at the correct index using $items, and pushed the text following that into that array. If the line began with SUMMARY, I pushed that text onto a name array, and incremented that $items scalar, as we were moving on to the next item. Since each entry has a date and a summary, and they're right next to each other, the @index array contained a bunch of anonymous 2 element arrays containing the date and the name of the person's birthday. My code looked like this:</p>
+{% highlight perl %}
+my $fh = open('birthdays.ics', :r);
+
+my @index;
+my $items = 0;
+
+for $fh.lines -> $line {
+  if $line ~~ m/^DTSTART\:(.+)/ {
+    @index[$items] = [];
+    push @index[$items], $0;
+  };
+  if $line ~~ m/^SUMMARY\:(.+)/ {
+    push @index[$items], $0;
+    print ".";
+    $items++;
+  };
+};
+print "\ndone\n";
+{% endhighlight %}
+<p>I printed a dot after each entry was done, because I thought it was cute.</p>
+<p>The next step was to go through this array and collect some information. First of all, I wanted to see how many birthdays each date had. I did this using a cool perl feature called auto-vivification.</p>
+<p>Basically, when you try to increment an element in a hash for a key that doesn't exist, perl automatically comes up with a value and initializes a space for that key in the hash. This is really useful, and we can use it to build up a hash quickly and dynamically.</p>
+{% highlight perl %}
+my %birthdays;
+for @index -> $list { %birthdays{$list[0]} += 1; };
+{% endhighlight %}
+<p>So, with this little line of code, we now have a hash with a key for each date, which points to an element containing the number of occurences for each date. This is cool.</p>
+<p>My next bit of fun was to figure out the max date. I did this by creating a scalar that keeps track of the date with the most occurences. I also created a scalar to keep track of the number of dates that had only one birthday - I just thought that was interesting.</p>
+{% highlight perl %}
+my $max = @index[0][0];
+my $unique = 0;
+
+for %birthdays.keys -> $date {
+  if %birthdays{$date} > %birthdays{$max} { $max = $date; };
+  say "$date: %birthdays{$date} occurences ";
+  if %birthdays{$date} == 1 {
+    $unique++;
+  };
+};
+{% endhighlight %}
+<p>%birthdays.keys creates an array containing all the keys in hash order. We assign that to $date each time, creating a loop that goes through each day with a birthday. We then compare that date's number of occurences with the number of occurences for the number of occurences for $max (the biggest date we have so far). If that date's number is higher, we throw our current biggest date away and assign the new date to $max. We initialized $max with our first date we added to the @index array in the beginning.</p>
+<p>While we're doing this, we also print out the date and the number of occurences and increment $unique if the day only has one birthday.</p>
+{% highlight perl %}
+say "{ $items - 1 } entries";
+say "there were { %birthdays.elems } days that had a birthday";
+say "$unique people have unique birthdays";
+
+say "the most common birthday was $max with %birthdays{$max} birthdays!";
+say "they are the birthdays of:";
+
+for @index -> $dates { if $dates[0] == $max { say $dates[1]; }; };
+{% endhighlight %}
+<p>Now we're finally done! We can print out the number of entries that we went through by using the $items scalar. However, we have to subtract one because we incremented it after the last entry. Next, we can use the number of elements in the %birthdays hash to find the number of days that had birthdays, since we only initialized a new key for days that had birthdays. We can just print the $unique scalar to say the number of people that have unique birthdays (birthdays on a date where there is only one occurence - them!). Finally, we can say that the most common birthday is $max (the date with the highest number of occurences) with %birthdays{$max} birthdays (the number of occurences for the biggest date.</p>
+<p>Finally, I just went through the whole index and checked to see if the date for each entry was equal to the date for the most common birthday, $max. If it was, I just said whose birthday it was by grabbing the second element.</p>
+<p>You can find the entire source for this <a href="https://gist.github.com/1380949">here.</a> It was a fun experience, and I really liked the power that perl6 gave me. If you've been considering using perl6 but have been afraid of the rumours, give it a try. You might find a fun situation to use it in, just like I did! The guys at #perl6 on Freenode are really helpful too - thanks, guys.</p>

@@ -9,22 +9,22 @@ title: parsing facebook birthdays with perl6
 <p>The interesting part was, there was a button at the bottom that said "Export Birthdays". I clicked on it, and it turned out to be a webcal:// url. A bit of googling told me that by getting rid of the webcall protocol part, I could download the ICS file that it linked to. Upon downloading that, to my pleasant surprise, I discovered that the ICS file was really just a plaintext file!</p>
 <p>I'm a real big fan of plaintext, as anything can read it and it's easy to write scripts to run through the information. Immediately, my mind went straight to perl. I'm probably more comfortable using perl than any other language, and I love the simplicity and ease with which perl can run through text. I wouldn't call myself a perl hacker, but I've used perl with favorable results before.</p>
 <p>The ICS file that I downloaded was 2558 lines, and was structured the same way throughout the entire document. Each line began with a keyword in capital letters, followed by a colon, and some more text associated with that keyword. Here's the header of the document:</p>
-<code>BEGIN:VCALENDAR
+<pre>BEGIN:VCALENDAR
 PRODID:-//Facebook//NONSGML Facebook Events V1.0//EN
 X-WR-CALNAME:Friends' Birthdays
 X-PUBLISHED-TTL:PT12H
 X-ORIGINAL-URL:http://www.facebook.com/events/birthdays/
 VERSION:2.0
 CALSCALE:GREGORIAN
-METHOD:PUBLISH</code>
+METHOD:PUBLISH</pre>
 <p>Following this, there were individual entries that followed this pattern:</p>
-<code>BEGIN:VEVENT
+<pre>BEGIN:VEVENT
 DTSTART:20120101
 SUMMARY:John Doe's Birthday
 RRULE:FREQ=YEARLY
 DURATION:P1D
 UID:foo@facebook.com
-END:VEVENT</code>
+END:VEVENT</pre>
 <p>As you can see, it's pretty self-explanatory. The BEGIN and END keywords are similar to tags you would see in HTML, and the entire file is one big VCALENDAR file. For what I'm doing, I can disregard the RRULE, DURATION, and UID tags. I'm really only interested in the birthdate (DTSTART), and whose birthdate it is (SUMMARY). The DTSTART tag already has the date in YYYY-MM-DD format, which lists all dates in sequential order, so I don't have to do anything weird with that. It's really all quite convenient.</p>
 <p>So, the first thing I did was open up the file, and go through each line. I created an @index array to hold all the information, and an $items scalar to keep track of where I was, and how many items there were. If the line began with DTSTART, I initialized an anonymous array at the correct index using $items, and pushed the text following that into that array. If the line began with SUMMARY, I pushed that text onto a name array, and incremented that $items scalar, as we were moving on to the next item. Since each entry has a date and a summary, and they're right next to each other, the @index array contained a bunch of anonymous 2 element arrays containing the date and the name of the person's birthday. My code looked like this:</p>
 {% highlight perl %}
